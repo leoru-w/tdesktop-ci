@@ -31,12 +31,14 @@ on:
 jobs:
 
   windows:
-    name: Windows
-    runs-on: windows-latest
+    name: Windows (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
 
     strategy:
+      fail-fast: false
       matrix:
+        runner: [windows-latest, windows-2022]
         arch: [x64]
         qt: [""]
         generator: [""]
@@ -51,6 +53,33 @@ jobs:
         shell: cmd
 
     steps:
+      - name: Maximize disk space.
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'SilentlyContinue'
+          $targets = @(
+            'C:\Program Files\Android',
+            'C:\Program Files (x86)\Android',
+            'C:\Android',
+            'C:\Program Files\Java',
+            'C:\Program Files\dotnet',
+            'C:\Program Files\Microsoft SDKs\Azure',
+            'C:\Program Files (x86)\Microsoft SDKs\Azure',
+            'C:\Selenium',
+            'C:\Program Files\Google\Chrome'
+          )
+          foreach ($t in $targets) {
+            if (Test-Path $t) { Remove-Item $t -Recurse -Force }
+          }
+          if (Test-Path 'C:\hostedtoolcache\windows') {
+            Get-ChildItem 'C:\hostedtoolcache\windows' -Directory |
+              Where-Object { $_.Name -notlike 'Python*' } |
+              ForEach-Object { Remove-Item $_.FullName -Recurse -Force }
+          }
+          Get-PSDrive C | ForEach-Object {
+            Write-Host ("Free on C: {0:N1} GB" -f ($_.Free / 1GB))
+          }
+
       - name: Prepare directories.
         run: |
           mkdir %userprofile%\TBuild\Libraries
@@ -97,37 +126,6 @@ jobs:
           nuget sources Disable -Name "Microsoft Visual Studio Offline Packages"
           nuget sources Add -Source https://api.nuget.org/v3/index.json & exit 0
 
-      - name: ThirdParty cache.
-        id: cache-third-party
-        uses: actions/cache@v6
-        with:
-          path: ${{ env.TBUILD }}\ThirdParty
-          key: ${{ runner.OS }}-${{ runner.arch }}-third-party-${{ env.CACHE_KEY }}
-          restore-keys: ${{ runner.OS }}-${{ runner.arch }}-third-party-
-
-      - name: Libraries cache.
-        id: cache-libs
-        uses: actions/cache@v6
-        with:
-          path: |
-            ${{ env.LibrariesPath }}\*
-            !${{ env.LibrariesPath }}\cache_keys
-            !${{ env.LibrariesPath }}\[qQ]t[_-]*
-            ${{ env.LibrariesPath }}\cache_keys\*
-            !${{ env.LibrariesPath }}\cache_keys\[qQ]t[_-]*
-          key: ${{ runner.OS }}-${{ matrix.arch }}-libs-v2-${{ env.CACHE_KEY }}
-          restore-keys: ${{ runner.OS }}-${{ matrix.arch }}-libs-v2-
-
-      - name: Qt cache.
-        id: cache-qt
-        uses: actions/cache@v6
-        with:
-          path: |
-            ${{ env.LibrariesPath }}\[qQ]t[_-]*
-            ${{ env.LibrariesPath }}\cache_keys\[qQ]t[_-]*
-          key: ${{ runner.OS }}-${{ matrix.arch }}-${{ matrix.qt || 'qt' }}-${{ env.CACHE_KEY }}
-          restore-keys: ${{ runner.OS }}-${{ matrix.arch }}-${{ matrix.qt || 'qt' }}-
-
       - name: Libraries.
         run: |
           %TBUILD%\%REPO_NAME%\Telegram\build\prepare\win.bat skip-release silent ${{ matrix.qt }}
@@ -135,7 +133,7 @@ jobs:
       - name: Read configuration matrix.
         shell: bash
         run: |
-          ARTIFACT_NAME="Telegram hidden-account"
+          ARTIFACT_NAME="Telegram hidden-account ${{ matrix.runner }}"
 
           ARCH=""
           if [ -n "${{ matrix.arch }}" ]; then
@@ -172,7 +170,9 @@ jobs:
 
       - name: Free up some disk space.
         shell: bash
-        run: find $LibrariesPath '(' '(' ! '(' -name '*.lib' -o -name '*.a' -o -name '*.exe' -o -name '*.h' -o -name '*.hpp' -o -name '*.inc' -o -name '*.cmake' -o -name '*.pc' -o -path '*/include/*' -o -path '*/objects-*' -o -path '*/cache_keys/*' -o -path '*/patches/*' -o -path '*/nv-codec-headers/*' ')' -type f ')' -o -empty ')' -delete
+        run: |
+          find $LibrariesPath '(' '(' ! '(' -name '*.lib' -o -name '*.a' -o -name '*.exe' -o -name '*.h' -o -name '*.hpp' -o -name '*.inc' -o -name '*.cmake' -o -name '*.pc' -o -path '*/include/*' -o -path '*/cache_keys/*' -o -path '*/patches/*' -o -path '*/nv-codec-headers/*' ')' -type f ')' -o -empty ')' -delete
+          df -h .
 
       - name: Telegram Desktop build.
         if: env.ONLY_CACHE == 'false'
