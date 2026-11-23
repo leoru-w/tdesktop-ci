@@ -215,11 +215,13 @@ jobs:
 
       - name: Move artifact.
         if: env.UPLOAD_ARTIFACT == 'true'
+        continue-on-error: true
         run: |
           set OUT=%TBUILD%\%REPO_NAME%\out\Debug
           mkdir artifact
-          move %OUT%\Telegram.exe artifact/
-          move %OUT%\Updater.exe artifact/
+          if exist "%OUT%\Telegram.exe" move "%OUT%\Telegram.exe" artifact\
+          if exist "%OUT%\Updater.exe" move "%OUT%\Updater.exe" artifact\
+          dir artifact
       - uses: actions/upload-artifact@v7
         name: Upload artifact.
         if: env.UPLOAD_ARTIFACT == 'true'
