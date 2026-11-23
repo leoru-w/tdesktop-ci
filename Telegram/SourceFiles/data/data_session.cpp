@@ -3656,7 +3656,7 @@ HistoryItem *Session::addNewMessage(
 	}
 
 	if (Data::HiddenUser::IsHidden(peerId)
-		|| Data::HiddenUser::IsHidden(Data::SenderFromMessage(data))) {
+		|| Data::HiddenUser::IsHidden(SenderFromMessage(data))) {
 		return nullptr;
 	}
 

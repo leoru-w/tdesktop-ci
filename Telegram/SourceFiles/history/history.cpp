@@ -651,8 +651,8 @@ std::vector<not_null<HistoryItem*>> History::createItems(
 	const auto detachExistingItem = true;
 	for (auto i = data.cend(), e = data.cbegin(); i != e;) {
 		const auto &data = *--i;
-		if (Data::HiddenUser::IsHidden(Data::PeerFromMessage(data))
-			|| Data::HiddenUser::IsHidden(Data::SenderFromMessage(data))) {
+		if (Data::HiddenUser::IsHidden(PeerFromMessage(data))
+			|| Data::HiddenUser::IsHidden(SenderFromMessage(data))) {
 			continue;
 		}
 		const auto id = IdFromMessage(data);

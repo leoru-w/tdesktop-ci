@@ -201,8 +201,8 @@ void Proxy::addSlice(const MTPmessages_Messages &slice, int alreadyLoaded) {
 	const auto localFlags = MessageFlags();
 	const auto type = NewMessageType::Existing;
 	for (const auto &message : messages) {
-		if (Data::HiddenUser::IsHidden(Data::PeerFromMessage(message))
-			|| Data::HiddenUser::IsHidden(Data::SenderFromMessage(message))) {
+		if (Data::HiddenUser::IsHidden(PeerFromMessage(message))
+			|| Data::HiddenUser::IsHidden(SenderFromMessage(message))) {
 			continue;
 		}
 		const auto item = history->addNewMessage(
